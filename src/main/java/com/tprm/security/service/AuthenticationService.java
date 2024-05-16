@@ -1,5 +1,7 @@
 package com.tprm.security.service;
 
+import java.util.Optional;
+
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -8,6 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import com.tprm.security.dto.UserDTO;
 import com.tprm.security.entity.User;
+import com.tprm.security.exception.UnauthorizedException;
 import com.tprm.security.repository.UserRepository;
 import com.tprm.security.utils.AuthenticationResponse;
 import com.tprm.security.utils.Role;
@@ -42,12 +45,14 @@ public class AuthenticationService {
         return AuthenticationResponse.builder().token(jwtToken).build();
     }
 
-    public AuthenticationResponse authenticate(UserDTO userDTO) {
+    public AuthenticationResponse authenticate(UserDTO userDTO) throws UnauthorizedException {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(userDTO.getEmail(), userDTO.getPassword()));
-        User user = userRepository.findByEmail(userDTO.getEmail()).orElseThrow();
-
-        String jwtToken = jwtService.generateToken(user);
+        Optional<User> user = userRepository.findByEmail(userDTO.getEmail());
+        if (user.isEmpty()) {
+            throw new UnauthorizedException("User Access Forbidden...");
+        }
+        String jwtToken = jwtService.generateToken(user.get());
         return AuthenticationResponse.builder().token(jwtToken).build();
     }
 
